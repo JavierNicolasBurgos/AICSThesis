@@ -28,5 +28,3 @@ This repository contains the resources and code related to my thesis on algorith
 ## Author
 
 - Javier Nicolas Burgos (https://github.com/elnicoburgos)
-
-Translated with DeepL.com (free version)
