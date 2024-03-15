@@ -20,9 +20,19 @@ void AStateMachineAIController::BeginPlay()
 
 void AStateMachineAIController::GetRandomPointAndTryingToMoveAI()
 {
+	ClearWaitTimer();
+	
 	FVector NewAIDestination;
 	GetRandomPoint(NewAIDestination);
 	TryingToMoveAI(NewAIDestination);
+}
+
+void AStateMachineAIController::ClearWaitTimer()
+{
+	if (WaitTimerHandle.IsValid())
+	{
+		GetWorldTimerManager().ClearTimer(WaitTimerHandle);
+	}
 }
 
 void AStateMachineAIController::GetRandomPoint(FVector& DestinationToMove) const

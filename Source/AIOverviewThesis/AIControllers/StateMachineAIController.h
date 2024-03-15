@@ -67,6 +67,11 @@ protected:
 	virtual void BeginPlay() override;
 
 	/**
+	* @brief Clears the wait timer if it is valid, preventing further execution of the wait period.
+	*/
+	void ClearWaitTimer();
+
+	/**
 	* @brief Gets a random point and then tries to move the AI towards that point.
 	*/
 	void GetRandomPointAndTryingToMoveAI();
