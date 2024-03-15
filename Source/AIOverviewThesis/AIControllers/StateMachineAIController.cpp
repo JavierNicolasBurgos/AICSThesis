@@ -18,6 +18,22 @@ void AStateMachineAIController::BeginPlay()
 	GetRandomPointAndTryingToMoveAI();
 }
 
+void AStateMachineAIController::GetRandomPointAndTryingToMoveAI()
+{
+	FVector NewAIDestination;
+	GetRandomPoint(NewAIDestination);
+	TryingToMoveAI(NewAIDestination);
+}
+
+void AStateMachineAIController::GetRandomPoint(FVector& DestinationToMove) const
+{
+	const UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+
+	FNavLocation NavLocation;
+	const bool bCanGetRandomPoint = NavSys->GetRandomPointInNavigableRadius(GetCharacter()->GetActorLocation(), RandomPointRadius, NavLocation);
+	bCanGetRandomPoint ? DestinationToMove = NavLocation.Location : DestinationToMove = FAISystem::InvalidLocation;
+}
+
 void AStateMachineAIController::TryingToMoveAI(const FVector& AIDestination)
 {
 	FAIMoveRequest MoveRequest;
@@ -38,21 +54,26 @@ void AStateMachineAIController::TryingToMoveAI(const FVector& AIDestination)
 void AStateMachineAIController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result)
 {
 	Super::OnMoveCompleted(RequestID, Result);
-	GetRandomPointAndTryingToMoveAI();
+
+	if (Result.Flags == FPathFollowingResultFlags::Success)
+	{
+		ResumeRandomMovementAfterWaitTime();
+	}
+	else
+	{
+		GetRandomPointAndTryingToMoveAI();
+	}
 }
 
-void AStateMachineAIController::GetRandomPointAndTryingToMoveAI()
+void AStateMachineAIController::ResumeRandomMovementAfterWaitTime()
 {
-	FVector NewAIDestination;
-	GetRandomPoint(NewAIDestination);
-	TryingToMoveAI(NewAIDestination);
+	StopMovement();
+	const float RemainingWaitTime = FMath::FRandRange(FMath::Max(0.0f, WaitTime - WaitTimeRandomDeviation), (WaitTime + WaitTimeRandomDeviation));
+	GetWorldTimerManager().SetTimer(WaitTimerHandle, this, &AStateMachineAIController::GetRandomPointAndTryingToMoveAI, RemainingWaitTime, false);
 }
 
-void AStateMachineAIController::GetRandomPoint(FVector& DestinationToMove) const
-{
-	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
 
-	FNavLocation NavLocation;
-	const bool bCanGetRandomPoint = NavSys->GetRandomPointInNavigableRadius(GetCharacter()->GetActorLocation(), RandomPointRadius, NavLocation);
-	bCanGetRandomPoint ? DestinationToMove = NavLocation.Location : DestinationToMove = FAISystem::InvalidLocation;
-}
+
+
+
+
