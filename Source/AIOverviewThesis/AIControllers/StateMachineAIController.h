@@ -32,22 +32,29 @@ private:
 	EAIStateMachines CurrentStateMachine;
 
 	// Radius used for determining random points in the world.
-	UPROPERTY(EditDefaultsOnly, Category = Thesis)
+	UPROPERTY(EditDefaultsOnly, Category = "Thesis|AI|Movement")
 	float RandomPointRadius = 500.0f;
 
 	/**
 	 * Waiting time after arriving at a point previously moved to.
 	 * After this time, the AI will move to another random point.
 	 */
-	UPROPERTY(EditDefaultsOnly, Category = Thesis)
+	UPROPERTY(EditDefaultsOnly, Category = "Thesis|AI|Movement")
 	float WaitTime = 3.0f;
 
 	/**
 	* Variable deviation that can be added to or subtracted from the WaitTime after reaching the point.
 	* This deviation is a random value.
 	*/
-	UPROPERTY(EditDefaultsOnly, Category = Thesis)
+	UPROPERTY(EditDefaultsOnly, Category = "Thesis|AI|Movement")
 	float WaitTimeRandomDeviation = 0.0f;
+
+	/**
+	* @brief Checks if the angle is within the AI's field of view range.
+	* For example a field of view angle of 90 degrees.
+	*/
+	UPROPERTY(EditDefaultsOnly, Category = "Thesis|AI|Vision", meta = (ClampMin = "0", ClampMax = "180", UIMin = "0", UIMax = "180"))
+	float AIFieldOfView = 90.0f;
 
 	/**
 	 * Timer handle for controlling the wait time before initiating movement.
@@ -60,6 +67,25 @@ protected:
 	* @brief Called when this AI controller "possesses" a pawn (usually a playable character).
 	*/
 	virtual void OnPossess(APawn* InPawn) override;
+	
+	/**
+	 * @brief Overrides the Tick function to perform AI logic on each frame update.
+	 * @param DeltaSeconds The time elapsed since the last frame.
+	 */
+	virtual void Tick(float DeltaSeconds) override;
+
+	/**
+	* @brief Checks if the AI can see the player.
+	* @return True if the AI can see the player, false otherwise.
+	*/
+	bool CanSeePlayer() const;
+
+	/**
+	* @brief Calculates the view angle between the AI and the player.
+	* @param PlayerCharacter The player character to calculate the view angle to.
+	* @return The view angle in degrees between the AI and the player.
+	*/
+	float  CalculateViewAngleToPlayer(const ACharacter* PlayerCharacter) const;
 
 	/**
 	* @brief Called at the beginning of the game for this AI controller.

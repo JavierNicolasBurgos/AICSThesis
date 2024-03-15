@@ -12,6 +12,49 @@ void AStateMachineAIController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 }
 
+void AStateMachineAIController::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	CanSeePlayer();
+}
+
+bool AStateMachineAIController::CanSeePlayer() const
+{
+	const ACharacter* PlayerCharacter = GetWorld()->GetFirstPlayerController()->GetCharacter();
+
+	if (PlayerCharacter)
+	{
+		const float AngleInDegrees = CalculateViewAngleToPlayer(PlayerCharacter);
+		const bool bLineOfSightTo = LineOfSightTo(PlayerCharacter);
+		
+		if (bLineOfSightTo && AngleInDegrees <= AIFieldOfView)
+		{
+			// The AI can see the player
+			GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Emerald, FString::Printf(TEXT("Can see")));
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+float AStateMachineAIController::CalculateViewAngleToPlayer(const ACharacter* PlayerCharacter) const
+{
+	const ACharacter* AICharacter = GetCharacter();
+
+	FVector VectorDirection = PlayerCharacter->GetActorLocation() - AICharacter->GetActorLocation();
+	VectorDirection.Normalize();
+
+	const FVector AIForward = AICharacter->GetActorForwardVector();
+
+	float AngleInDegrees = FMath::Acos(FVector::DotProduct(AIForward, VectorDirection));
+	AngleInDegrees = FMath::RadiansToDegrees(AngleInDegrees);
+
+	return AngleInDegrees;
+}
+
 void AStateMachineAIController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -81,9 +124,3 @@ void AStateMachineAIController::ResumeRandomMovementAfterWaitTime()
 	const float RemainingWaitTime = FMath::FRandRange(FMath::Max(0.0f, WaitTime - WaitTimeRandomDeviation), (WaitTime + WaitTimeRandomDeviation));
 	GetWorldTimerManager().SetTimer(WaitTimerHandle, this, &AStateMachineAIController::GetRandomPointAndTryingToMoveAI, RemainingWaitTime, false);
 }
-
-
-
-
-
-
