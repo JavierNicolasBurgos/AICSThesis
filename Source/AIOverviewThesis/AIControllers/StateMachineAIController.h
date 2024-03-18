@@ -57,6 +57,13 @@ private:
 	float AIFieldOfView = 90.0f;
 
 	/**
+	 * @brief The distance at which the AI loses sight of the player.
+	 * It represents the radius within which the AI stops tracking the player's position.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Thesis|AI|Vision", meta = (UIMin = 0.0, ClampMin = 0.0))
+	float LoseSightRadius = 1000.0f;
+
+	/**
 	 * Timer handle for controlling the wait time before initiating movement.
 	 */
 	FTimerHandle WaitTimerHandle;
@@ -86,6 +93,13 @@ protected:
 	* @return The view angle in degrees between the AI and the player.
 	*/
 	float  CalculateViewAngleToPlayer(const ACharacter* PlayerCharacter) const;
+
+	/**
+	 * @brief Calculates the squared distance between the AI and the player character.
+	 * @param PlayerCharacter The player character whose distance to the AI is being calculated.
+	 * @return The squared distance between the AI and the player character.
+	 */
+	float CalculateSquaredDistanceToPlayer(const ACharacter* PlayerCharacter) const;
 
 	/**
 	* @brief Called at the beginning of the game for this AI controller.

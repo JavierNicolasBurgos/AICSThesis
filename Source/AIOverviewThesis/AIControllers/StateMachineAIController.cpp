@@ -25,16 +25,20 @@ bool AStateMachineAIController::CanSeePlayer() const
 
 	if (PlayerCharacter)
 	{
-		const float AngleInDegrees = CalculateViewAngleToPlayer(PlayerCharacter);
-		const bool bLineOfSightTo = LineOfSightTo(PlayerCharacter);
-		
-		if (bLineOfSightTo && AngleInDegrees <= AIFieldOfView)
+		const float DistanceToPlayer = CalculateSquaredDistanceToPlayer(PlayerCharacter);
+		if (DistanceToPlayer <= LoseSightRadius * LoseSightRadius)
 		{
-			// The AI can see the player
-			GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Emerald, FString::Printf(TEXT("Can see")));
+			const float AngleInDegrees = CalculateViewAngleToPlayer(PlayerCharacter);
+			const bool bLineOfSightTo = LineOfSightTo(PlayerCharacter);
+			if (bLineOfSightTo && AngleInDegrees <= AIFieldOfView)
+			{
+				// The AI can see the player
+				GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Emerald, FString::Printf(TEXT("Can see")));
 
-			return true;
+				return true;
+			}	
 		}
+		
 	}
 
 	return false;
@@ -44,15 +48,22 @@ float AStateMachineAIController::CalculateViewAngleToPlayer(const ACharacter* Pl
 {
 	const ACharacter* AICharacter = GetCharacter();
 
-	FVector VectorDirection = PlayerCharacter->GetActorLocation() - AICharacter->GetActorLocation();
-	VectorDirection.Normalize();
+	FVector DirectionVector = PlayerCharacter->GetActorLocation() - AICharacter->GetActorLocation();
+	DirectionVector.Normalize();
 
 	const FVector AIForward = AICharacter->GetActorForwardVector();
 
-	float AngleInDegrees = FMath::Acos(FVector::DotProduct(AIForward, VectorDirection));
+	float AngleInDegrees = FMath::Acos(FVector::DotProduct(AIForward, DirectionVector));
 	AngleInDegrees = FMath::RadiansToDegrees(AngleInDegrees);
 
 	return AngleInDegrees;
+}
+
+float AStateMachineAIController::CalculateSquaredDistanceToPlayer(const ACharacter* PlayerCharacter) const
+{
+	const ACharacter* AICharacter = GetCharacter();
+	const FVector DirectionVector = PlayerCharacter->GetActorLocation() - AICharacter->GetActorLocation();
+	return DirectionVector.SizeSquared();
 }
 
 void AStateMachineAIController::BeginPlay()
