@@ -4,72 +4,26 @@
 #include "StateMachineAIController.h"
 #include "GameFramework/Character.h"
 #include "NavigationSystem.h"
+#include "Perception/AIPerceptionComponent.h"
+#include "Perception/AISenseConfig_Sight.h"
 #include "Tasks/AITask_MoveTo.h"
 
-void AStateMachineAIController::OnPossess(APawn* InPawn)
-{
-	CurrentStateMachine = EAIStateMachines::Patrol;
-	Super::OnPossess(InPawn);
-}
 
 void AStateMachineAIController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	CanSeePlayer();
-}
-
-bool AStateMachineAIController::CanSeePlayer() const
-{
-	const ACharacter* PlayerCharacter = GetWorld()->GetFirstPlayerController()->GetCharacter();
-
-	if (PlayerCharacter)
+	if (bCanSeePlayer)
 	{
-		const float DistanceToPlayer = CalculateSquaredDistanceToPlayer(PlayerCharacter);
-		if (DistanceToPlayer <= LoseSightRadius * LoseSightRadius)
-		{
-			const float AngleInDegrees = CalculateViewAngleToPlayer(PlayerCharacter);
-			const bool bLineOfSightTo = LineOfSightTo(PlayerCharacter);
-			if (bLineOfSightTo && AngleInDegrees <= AIFieldOfView)
-			{
-				// The AI can see the player
-				GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Emerald, FString::Printf(TEXT("Can see")));
-
-				return true;
-			}	
-		}
-		
+			MoveToActor(GetWorld()->GetFirstPlayerController()->GetCharacter(),AcceptanceRadius);
 	}
-
-	return false;
-}
-
-float AStateMachineAIController::CalculateViewAngleToPlayer(const ACharacter* PlayerCharacter) const
-{
-	const ACharacter* AICharacter = GetCharacter();
-
-	FVector DirectionVector = PlayerCharacter->GetActorLocation() - AICharacter->GetActorLocation();
-	DirectionVector.Normalize();
-
-	const FVector AIForward = AICharacter->GetActorForwardVector();
-
-	float AngleInDegrees = FMath::Acos(FVector::DotProduct(AIForward, DirectionVector));
-	AngleInDegrees = FMath::RadiansToDegrees(AngleInDegrees);
-
-	return AngleInDegrees;
-}
-
-float AStateMachineAIController::CalculateSquaredDistanceToPlayer(const ACharacter* PlayerCharacter) const
-{
-	const ACharacter* AICharacter = GetCharacter();
-	const FVector DirectionVector = PlayerCharacter->GetActorLocation() - AICharacter->GetActorLocation();
-	return DirectionVector.SizeSquared();
 }
 
 void AStateMachineAIController::BeginPlay()
 {
 	Super::BeginPlay();
-	GetRandomPointAndTryingToMoveAI();
+	PerceptionComponent->OnTargetPerceptionUpdated.AddUniqueDynamic(this, &AStateMachineAIController::PerceptionUpdated);
+	SetCurrentState(Patrol);
 }
 
 void AStateMachineAIController::GetRandomPointAndTryingToMoveAI()
@@ -78,7 +32,7 @@ void AStateMachineAIController::GetRandomPointAndTryingToMoveAI()
 	
 	FVector NewAIDestination;
 	GetRandomPoint(NewAIDestination);
-	TryingToMoveAI(NewAIDestination);
+	MoveToLocation(NewAIDestination, AcceptanceRadius);
 }
 
 void AStateMachineAIController::ClearWaitTimer()
@@ -98,40 +52,77 @@ void AStateMachineAIController::GetRandomPoint(FVector& DestinationToMove) const
 	bCanGetRandomPoint ? DestinationToMove = NavLocation.Location : DestinationToMove = FAISystem::InvalidLocation;
 }
 
-void AStateMachineAIController::TryingToMoveAI(const FVector& AIDestination)
-{
-	FAIMoveRequest MoveRequest;
-
-	if (FAISystem::IsValidLocation(AIDestination))
-	{
-		MoveRequest.SetGoalLocation(AIDestination);
-	}
-
-	MoveRequest.SetNavigationFilter(GetDefaultNavigationFilterClass());
-
-	UAITask_MoveTo* MyTask = UAITask::NewAITask<UAITask_MoveTo>(*this, EAITaskPriority::High);
-	check(MyTask);
-	MyTask->SetUp(this, MoveRequest);
-	MyTask->ReadyForActivation();
-}
-
 void AStateMachineAIController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result)
 {
 	Super::OnMoveCompleted(RequestID, Result);
 
-	if (Result.Flags == FPathFollowingResultFlags::Success)
+	if (!bCanSeePlayer)
 	{
-		ResumeRandomMovementAfterWaitTime();
-	}
-	else
-	{
-		GetRandomPointAndTryingToMoveAI();
+		SetCurrentState(Patrol);
 	}
 }
 
 void AStateMachineAIController::ResumeRandomMovementAfterWaitTime()
 {
-	StopMovement();
 	const float RemainingWaitTime = FMath::FRandRange(FMath::Max(0.0f, WaitTime - WaitTimeRandomDeviation), (WaitTime + WaitTimeRandomDeviation));
 	GetWorldTimerManager().SetTimer(WaitTimerHandle, this, &AStateMachineAIController::GetRandomPointAndTryingToMoveAI, RemainingWaitTime, false);
+}
+
+void AStateMachineAIController::PerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
+{
+	StopMovement();
+
+	LastStimulusLocation = Stimulus.StimulusLocation;
+
+	if (Stimulus.WasSuccessfullySensed())
+	{
+		bCanSeePlayer = true;
+
+		SetCurrentState(MoveToPlayer);
+
+		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Emerald, FString::Printf(TEXT("Move To Player state is active.")));
+	}
+	else
+	{
+		bCanSeePlayer = false;
+
+		SetCurrentState(MoveToLastStimulusLocation);
+
+		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("Move to last stimulus location state is active")));
+	}
+}
+
+AStateMachineAIController::AStateMachineAIController()
+{
+	PerceptionComponent = CreateDefaultSubobject<UAIPerceptionComponent>("PerceptionComponent");
+	AISenseConfigSight = CreateDefaultSubobject<UAISenseConfig_Sight>("SenseSight");
+	AISenseConfigSight->DetectionByAffiliation.bDetectEnemies = true;
+	AISenseConfigSight->DetectionByAffiliation.bDetectFriendlies = true;
+	AISenseConfigSight->DetectionByAffiliation.bDetectNeutrals = true;
+
+	PerceptionComponent->ConfigureSense(*AISenseConfigSight);
+	PerceptionComponent->SetDominantSense(UAISenseConfig_Sight::StaticClass());
+}
+
+void AStateMachineAIController::SetCurrentState(EAIStateMachines InState)
+{
+	CurrentStateMachine = InState;
+
+	switch (CurrentStateMachine)
+	{
+		case None:
+			SetCurrentState(Patrol);
+			break;
+		case Patrol:
+			ResumeRandomMovementAfterWaitTime();
+			break;
+		case MoveToPlayer:
+			MoveToActor(GetWorld()->GetFirstPlayerController()->GetCharacter(), AcceptanceRadius);
+			break;
+		case MoveToLastStimulusLocation:
+			MoveToLocation(LastStimulusLocation, AcceptanceRadius);
+			break;
+		default:
+			break;
+	}
 }

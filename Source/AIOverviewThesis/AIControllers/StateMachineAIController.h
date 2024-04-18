@@ -4,17 +4,22 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "Perception/AIPerceptionTypes.h"
 #include "StateMachineAIController.generated.h"
+
+class UAISenseConfig_Sight;
 
 UENUM()
 enum EAIStateMachines
 {
+	/** Default state, representing no specific action. */
+	None = 0,
 	/** State to patrol a given area or route. */
-	Patrol = 0,
+	Patrol = 1,
 	/** State to move to the player's position.  */
-	MoveToPlayer = 1,
-	/**  State to flee or move away from the player.  */
-	Flee = 2
+	MoveToPlayer = 2,
+	/** State to move to the last known stimulus location. */
+	MoveToLastStimulusLocation = 3
 };
 
 /**
@@ -28,10 +33,26 @@ class AIOVERVIEWTHESIS_API AStateMachineAIController : public AAIController
 
 private:
 
-	// Current state machine that the AI is currently in.
+	/*
+	* Current state machine that the AI is currently in.
+	*/
 	EAIStateMachines CurrentStateMachine;
 
-	// Radius used for determining random points in the world.
+	/**
+	* @brief Configuration of the visual perception (sense of sight) of the AI.
+	* This setting defines the visual detection parameters for the AI.
+	*/
+	UAISenseConfig_Sight* AISenseConfigSight = nullptr;
+	
+	/**
+	* @brief Stores the last location of the sensory stimulus perceived by the AI.
+	* Value initialized to an invalid location.
+	*/
+	FVector LastStimulusLocation = FAISystem::InvalidLocation;
+
+	/**
+	 * Radius used for determining random points in the world.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Thesis|AI|Movement")
 	float RandomPointRadius = 500.0f;
 
@@ -50,56 +71,28 @@ private:
 	float WaitTimeRandomDeviation = 0.0f;
 
 	/**
-	* @brief Checks if the angle is within the AI's field of view range.
-	* For example a field of view angle of 90 degrees.
-	*/
-	UPROPERTY(EditDefaultsOnly, Category = "Thesis|AI|Vision", meta = (ClampMin = "0", ClampMax = "180", UIMin = "0", UIMax = "180"))
-	float AIFieldOfView = 90.0f;
+	 * The acceptable range from a destination point within which the AI considers it has reached its goal.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Thesis|AI|Movement", meta = (UIMin = 0.0, ClampMin = 0.0))
+	float AcceptanceRadius = 100.0f;
 
 	/**
-	 * @brief The distance at which the AI loses sight of the player.
-	 * It represents the radius within which the AI stops tracking the player's position.
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Thesis|AI|Vision", meta = (UIMin = 0.0, ClampMin = 0.0))
-	float LoseSightRadius = 1000.0f;
+	* @brief Indicates whether the AI can currently see the player.
+	*/
+	bool bCanSeePlayer = false;
 
 	/**
 	 * Timer handle for controlling the wait time before initiating movement.
 	 */
 	FTimerHandle WaitTimerHandle;
-	
+
 protected:
 
-	/**
-	* @brief Called when this AI controller "possesses" a pawn (usually a playable character).
-	*/
-	virtual void OnPossess(APawn* InPawn) override;
-	
 	/**
 	 * @brief Overrides the Tick function to perform AI logic on each frame update.
 	 * @param DeltaSeconds The time elapsed since the last frame.
 	 */
 	virtual void Tick(float DeltaSeconds) override;
-
-	/**
-	* @brief Checks if the AI can see the player.
-	* @return True if the AI can see the player, false otherwise.
-	*/
-	bool CanSeePlayer() const;
-
-	/**
-	* @brief Calculates the view angle between the AI and the player.
-	* @param PlayerCharacter The player character to calculate the view angle to.
-	* @return The view angle in degrees between the AI and the player.
-	*/
-	float  CalculateViewAngleToPlayer(const ACharacter* PlayerCharacter) const;
-
-	/**
-	 * @brief Calculates the squared distance between the AI and the player character.
-	 * @param PlayerCharacter The player character whose distance to the AI is being calculated.
-	 * @return The squared distance between the AI and the player character.
-	 */
-	float CalculateSquaredDistanceToPlayer(const ACharacter* PlayerCharacter) const;
 
 	/**
 	* @brief Called at the beginning of the game for this AI controller.
@@ -124,13 +117,6 @@ protected:
 	void GetRandomPoint(FVector& DestinationToMove) const;
 	
 	/**
-	* @brief Tries to move the AI towards a specific location.
-	* 
-	* @param AIDestination The location the AI will attempt to move to.
-	*/
-	void TryingToMoveAI(const FVector& AIDestination);
-
-	/**
 	* @brief Called when a requested movement by the AI is completed.
 	* 
 	* @param RequestID The ID of the movement request.
@@ -145,4 +131,25 @@ protected:
 	*/
 	void ResumeRandomMovementAfterWaitTime();
 
+	/**
+	* @brief Callback function that is invoked when the AI perception system is updated.
+	* @param Actor The actor that triggered the perception update.
+	* @param Stimulus The stimulus information received from the actor.
+	*/
+	UFUNCTION()
+	void PerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+
+public:
+
+	/**
+	* @brief Constructor of the AStateMachineAIController class.
+	* Initializes the properties and settings needed for the AI.
+	*/
+	AStateMachineAIController();
+
+	/**
+	* @brief Sets the current state of the AI state machine.
+	* @param InState The new state to set.
+	*/
+	void SetCurrentState(EAIStateMachines InState);
 };
