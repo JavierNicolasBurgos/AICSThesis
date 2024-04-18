@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AIController.h"
+#include "AIControllerBase.h"
 #include "BehaviorTreeAIController.generated.h"
 
 /**
@@ -11,7 +11,7 @@
  * This class handles the behavior and decisions of the NPC using a Behavior Trees.
  */
 UCLASS()
-class AIOVERVIEWTHESIS_API ABehaviorTreeAIController : public AAIController
+class AIOVERVIEWTHESIS_API ABehaviorTreeAIController : public AAIControllerBase
 {
 	GENERATED_BODY()
 
@@ -24,10 +24,16 @@ private:
 	TObjectPtr<UBehaviorTree> BTToRun;
 	
 protected:
-
 	
 	/**
 	* @brief Called when this AI controller "possesses" a pawn (usually a playable character).
 	*/
 	virtual void OnPossess(APawn* InPawn) override;
+
+	/**
+	* @brief Callback function that is invoked when the AI perception system is updated.
+	* @param Actor The actor that triggered the perception update.
+	* @param Stimulus The stimulus information received from the actor.
+	*/
+	virtual void PerceptionUpdated(AActor* Actor, FAIStimulus Stimulus) override;
 };

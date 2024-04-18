@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AIController.h"
+#include "AIControllerBase.h"
 #include "Perception/AIPerceptionTypes.h"
 #include "StateMachineAIController.generated.h"
 
@@ -27,7 +27,7 @@ enum EAIStateMachines
  * This class handles the behavior and decisions of the NPC using a state machine.
  */
 UCLASS()
-class AIOVERVIEWTHESIS_API AStateMachineAIController : public AAIController
+class AIOVERVIEWTHESIS_API AStateMachineAIController : public AAIControllerBase
 {
 	GENERATED_BODY()
 
@@ -38,12 +38,6 @@ private:
 	*/
 	EAIStateMachines CurrentStateMachine;
 
-	/**
-	* @brief Configuration of the visual perception (sense of sight) of the AI.
-	* This setting defines the visual detection parameters for the AI.
-	*/
-	UAISenseConfig_Sight* AISenseConfigSight = nullptr;
-	
 	/**
 	* @brief Stores the last location of the sensory stimulus perceived by the AI.
 	* Value initialized to an invalid location.
@@ -136,16 +130,9 @@ protected:
 	* @param Actor The actor that triggered the perception update.
 	* @param Stimulus The stimulus information received from the actor.
 	*/
-	UFUNCTION()
-	void PerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+	virtual void PerceptionUpdated(AActor* Actor, FAIStimulus Stimulus) override;
 
 public:
-
-	/**
-	* @brief Constructor of the AStateMachineAIController class.
-	* Initializes the properties and settings needed for the AI.
-	*/
-	AStateMachineAIController();
 
 	/**
 	* @brief Sets the current state of the AI state machine.

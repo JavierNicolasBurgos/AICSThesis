@@ -4,8 +4,6 @@
 #include "StateMachineAIController.h"
 #include "GameFramework/Character.h"
 #include "NavigationSystem.h"
-#include "Perception/AIPerceptionComponent.h"
-#include "Perception/AISenseConfig_Sight.h"
 #include "Tasks/AITask_MoveTo.h"
 
 
@@ -22,7 +20,6 @@ void AStateMachineAIController::Tick(float DeltaSeconds)
 void AStateMachineAIController::BeginPlay()
 {
 	Super::BeginPlay();
-	PerceptionComponent->OnTargetPerceptionUpdated.AddUniqueDynamic(this, &AStateMachineAIController::PerceptionUpdated);
 	SetCurrentState(Patrol);
 }
 
@@ -70,6 +67,8 @@ void AStateMachineAIController::ResumeRandomMovementAfterWaitTime()
 
 void AStateMachineAIController::PerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
+	Super::PerceptionUpdated(Actor, Stimulus);
+	
 	StopMovement();
 
 	LastStimulusLocation = Stimulus.StimulusLocation;
@@ -90,18 +89,6 @@ void AStateMachineAIController::PerceptionUpdated(AActor* Actor, FAIStimulus Sti
 
 		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("Move to last stimulus location state is active")));
 	}
-}
-
-AStateMachineAIController::AStateMachineAIController()
-{
-	PerceptionComponent = CreateDefaultSubobject<UAIPerceptionComponent>("PerceptionComponent");
-	AISenseConfigSight = CreateDefaultSubobject<UAISenseConfig_Sight>("SenseSight");
-	AISenseConfigSight->DetectionByAffiliation.bDetectEnemies = true;
-	AISenseConfigSight->DetectionByAffiliation.bDetectFriendlies = true;
-	AISenseConfigSight->DetectionByAffiliation.bDetectNeutrals = true;
-
-	PerceptionComponent->ConfigureSense(*AISenseConfigSight);
-	PerceptionComponent->SetDominantSense(UAISenseConfig_Sight::StaticClass());
 }
 
 void AStateMachineAIController::SetCurrentState(EAIStateMachines InState)
