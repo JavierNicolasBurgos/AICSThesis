@@ -4,10 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "NativeGameplayTags.h"
 #include "AIHelpersLibrary.generated.h"
 
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_STATES_NONE);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_STATES_PATROL);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_STATES_MOVETO_PLAYER);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_STATES_MOVETO_LASTSTIMULUSLOCATION);
+
 /**
- * Help library containing AI-related functions, accessible in Blueprints.
+ * Help library containing AI-related functions, gameplay tags, accessible in Blueprints or C++.
  */
 UCLASS()
 class AIOVERVIEWTHESIS_API UAIHelpersLibrary : public UBlueprintFunctionLibrary

@@ -10,6 +10,6 @@ public class AIOverviewThesis : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
 		
-		PrivateDependencyModuleNames.AddRange(new []{ "AIModule", "GameplayTasks", "NavigationSystem"});
+		PrivateDependencyModuleNames.AddRange(new []{ "AIModule", "GameplayTasks", "NavigationSystem", "GameplayStateTreeModule", "GameplayTags" });
 	}
 }
